@@ -30,4 +30,18 @@ public class Role {
     public Role(RoleType roleType) {
         this.roleType = roleType;
     }
+
+    public void addMemberRole(MemberRole memberRole) {
+        if (!memberRoles.contains(memberRole)) {
+            memberRoles.add(memberRole);
+            memberRole.setRole(this);
+        }
+    }
+
+    public void removeMemberRole(MemberRole memberRole) {
+        if (memberRoles.contains(memberRole)) {
+            memberRoles.remove(memberRole);
+            memberRole.setRole(null);
+        }
+    }
 }

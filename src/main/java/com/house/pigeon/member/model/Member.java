@@ -1,7 +1,10 @@
 package com.house.pigeon.member.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,5 +35,19 @@ public class Member {
         this.password = password;
         this.phone = phone;
         this.memberRoles = memberRoles != null ? memberRoles : new ArrayList<>();
+    }
+
+    public void addMemberRole(MemberRole memberRole) {
+        if (!memberRoles.contains(memberRole)) {
+            memberRoles.add(memberRole);
+            memberRole.setMember(this);
+        }
+    }
+
+    public void removeMemberRole(MemberRole memberRole) {
+        if (memberRoles.contains(memberRole)) {
+            memberRoles.remove(memberRole);
+            memberRole.setMember(null);
+        }
     }
 }
