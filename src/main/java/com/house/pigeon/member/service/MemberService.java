@@ -3,13 +3,10 @@ package com.house.pigeon.member.service;
 import com.house.pigeon.common.exception.CustomDataAlreadyExistsException;
 import com.house.pigeon.common.exception.CustomDataNotFoundException;
 import com.house.pigeon.common.exception.CustomForbiddenException;
-import com.house.pigeon.common.exception.CustomJwtException;
 import com.house.pigeon.common.jwt.JWTProvider;
-import com.house.pigeon.common.jwt.model.TokenStorage;
-import com.house.pigeon.common.jwt.model.TokenType;
+import com.house.pigeon.common.jwt.model.JWTStorageDTO;
 import com.house.pigeon.common.jwt.model.request.CreateJWTRequest;
 import com.house.pigeon.common.jwt.model.request.ReissueRefreshTokenRequest;
-import com.house.pigeon.common.jwt.repository.TokenStorageRepository;
 import com.house.pigeon.common.jwt.service.JWTStorageService;
 import com.house.pigeon.common.security.CustomUserDetailsService;
 import com.house.pigeon.member.model.Member;
@@ -40,7 +37,6 @@ public class MemberService {
     private final JWTProvider jwtProvider;
 
     private final JWTStorageService jwtStorageService;
-    private final TokenStorageRepository tokenStorageRepository;
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
@@ -105,7 +101,7 @@ public class MemberService {
         String accessToken = jwtProvider.createAccessToken(jwtTokenRequest);
         String refreshToken = jwtProvider.createRefreshToken(jwtTokenRequest);
 
-        jwtStorageService.addToken(refreshToken, TokenType.REFRESH_TOKEN);
+        jwtStorageService.storeRefreshToken(member.getId(), refreshToken);
 
         return LoginMemberResponse.builder()
                 .memberId(member.getId())
@@ -117,19 +113,8 @@ public class MemberService {
     // 회원 로그아웃
     @Transactional
     public void logout(LogoutMemberRequest request) {
-//        if(tokenBlacklistRepository.existsByToken(request.refreshToken())) {
-//            throw new CustomJwtException("블랙리스트에 등록된 토큰입니다.");
-//        }
-
-        TokenStorage tokenStorage = tokenStorageRepository.findByToken(request.refreshToken())
-                .orElseThrow(() -> new CustomJwtException("존재하지 않는 토큰입니다."));
-
-//        TokenBlacklist tokenBlacklist = TokenBlacklist.builder()
-//                .token(request.refreshToken())
-//                .build();
-
-        tokenStorageRepository.delete(tokenStorage);
-//        tokenBlacklistRepository.save(tokenBlacklist);
+        JWTStorageDTO refreshTokenDTO = jwtStorageService.findRefreshToken(request.refreshToken());
+        jwtStorageService.deleteRefreshToken(refreshTokenDTO.refreshToken());
     }
 
     // 토큰 재발급
@@ -165,6 +150,11 @@ public class MemberService {
         // 리프레시 토큰이 만료되거나 만료 시간이 24시간 미만 남은 경우: 액세스 토큰, 리프레시 토큰 재발행
         String newAccessToken = jwtProvider.createAccessToken(createJWTRequest);
         String newRefreshToken = jwtProvider.createRefreshToken(createJWTRequest);
+
+        JWTStorageDTO refreshToken = jwtStorageService.findRefreshToken(request.refreshToken());
+        jwtStorageService.deleteRefreshToken(refreshToken.refreshToken());
+        jwtStorageService.storeRefreshToken(memberId, newRefreshToken);
+
         return LoginMemberResponse.builder()
                 .memberId(memberId)
                 .accessToken(newAccessToken)
